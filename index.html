@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nifa Core</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0a0a0c; --card:#17171b; --border:#2c2c33; --muted:#c9c9d0; --accent:#7c3aed; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Sora',system-ui,sans-serif; background:var(--bg); color:#fff; min-height:100vh; }
+  #bg { position:fixed; inset:0; z-index:0; }
+  .hidden { display:none !important; }
+
+  /* ---------- LOGIN ---------- */
+  #loginView { position:relative; z-index:1; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px 16px; }
+  .card { width:100%; max-width:420px; background:var(--card); border:1px solid var(--border);
+    border-bottom:5px solid var(--accent); border-radius:28px; padding:40px 28px 32px; box-shadow:0 20px 60px rgba(0,0,0,.6); }
+  .logo { display:flex; justify-content:center; }
+  .logo .robot { width:110px; height:120px; }
+  .brand .robot { width:38px; height:42px; }
+  .robot { overflow:visible; animation:float 3.2s ease-in-out infinite; filter:drop-shadow(0 8px 14px rgba(124,58,237,.55)); }
+  @keyframes float { 0%,100% { transform:translateY(0) rotate(-1.5deg); } 50% { transform:translateY(-7px) rotate(1.5deg); } }
+  .robot .eye { transform-box:fill-box; transform-origin:center; animation:blink 4s infinite; }
+  @keyframes blink { 0%,92%,100% { transform:scaleY(1); } 95% { transform:scaleY(.1); } }
+  .robot .ant { animation:glow 1.6s ease-in-out infinite; }
+  @keyframes glow { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+  .robot .arm-l { transform-box:fill-box; transform-origin:top center; animation:wave 2.4s ease-in-out infinite; }
+  @keyframes wave { 0%,100% { transform:rotate(0); } 50% { transform:rotate(-14deg); } }
+  @media (prefers-reduced-motion:reduce) { .robot, .robot * { animation:none !important; } }
+  h1 { text-align:center; font-size:28px; font-weight:800; line-height:1.25; margin:8px 0 12px; }
+  h1 span { color:var(--accent); }
+  .sub { text-align:center; color:var(--muted); font-size:14px; margin-bottom:32px; }
+  label.t { display:block; font-weight:600; margin-bottom:10px; }
+  .field { position:relative; margin-bottom:24px; }
+  input[type=email], input[type=password], input[type=text] { width:100%; padding:16px 18px; background:var(--bg); color:#fff;
+    border:2px solid var(--border); border-radius:18px; font:inherit; font-size:16px; outline:none; }
+  input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(124,58,237,.25); }
+  .eye { position:absolute; right:16px; top:50%; transform:translateY(-50%); background:none; border:0; color:var(--muted); font-size:20px; cursor:pointer; }
+  .remember { display:flex; align-items:center; gap:12px; margin-bottom:28px; color:var(--muted); }
+  .remember input { width:22px; height:22px; accent-color:var(--accent); }
+  .btn { width:100%; padding:16px; background:var(--accent); color:#fff; border:0; border-radius:18px;
+    font:inherit; font-weight:800; font-size:17px; cursor:pointer; box-shadow:0 8px 24px rgba(124,58,237,.35); }
+  .btn:active { transform:scale(.98); }
+  hr { border:0; border-top:1px solid var(--muted); opacity:.5; margin:32px 0 24px; }
+  .links { text-align:center; color:var(--muted); line-height:2; }
+  .links a { color:var(--accent); font-weight:800; text-decoration:none; }
+  #msg { text-align:center; color:#ff6b6b; font-size:14px; min-height:18px; margin-bottom:12px; }
+
+  /* ---------- DASHBOARD ---------- */
+  header { position:sticky; top:0; z-index:10; display:flex; align-items:center; justify-content:space-between;
+    padding:14px 18px; background:rgba(21,21,25,.95); border-bottom:1px solid var(--border); }
+  .brand { font-weight:800; font-size:24px; display:flex; align-items:center; gap:10px; }
+  .brand b { color:var(--accent); }
+  .user { position:relative; }
+  .avatar { display:flex; align-items:center; gap:6px; background:none; border:0; color:#fff; cursor:pointer; font:inherit; }
+  .pic { width:52px; height:52px; border-radius:50%; border:3px solid var(--accent); display:grid; place-items:center;
+    background:#1a1030; font-weight:800; color:var(--accent); font-size:20px; }
+  .menu { display:none; position:absolute; right:0; top:62px; min-width:180px; background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .menu.open { display:block; }
+  .menu button { display:block; width:100%; text-align:left; padding:14px 16px; color:#fff; background:none; border:0; font:inherit; cursor:pointer; }
+  .menu button:hover { background:#222228; }
+  main { position:relative; z-index:1; max-width:720px; margin:0 auto; padding:24px 16px 60px; }
+  h2 { font-size:22px; margin-bottom:4px; }
+  .hello { color:var(--muted); margin-bottom:24px; font-size:14px; }
+  .module { margin-bottom:28px; padding-bottom:28px; border-bottom:1px solid var(--border); }
+  .mcard { display:block; text-decoration:none; color:inherit; background:#151519; border:2px solid var(--border);
+    border-radius:26px; overflow:hidden; transition:transform .15s, border-color .2s; }
+  .mcard:hover { border-color:var(--accent); transform:translateY(-3px); }
+  .thumb { position:relative; aspect-ratio:4/3; display:grid; place-items:center; font-size:72px; }
+  .badge { position:absolute; left:16px; top:16px; background:#1f1633; color:var(--accent); border:1px solid #4c2f8a;
+    border-radius:12px; padding:10px 18px; font-weight:800; letter-spacing:1px; font-size:16px; }
+  .info { padding:26px 22px 40px; }
+  .info h3 { font-size:24px; font-weight:800; line-height:1.3; }
+  .info p { color:var(--muted); font-size:14px; margin-top:8px; }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<!-- Robot 3D ungu (dipakai ulang di login & header) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="rBody" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#c4b5fd"/><stop offset=".45" stop-color="#8b5cf6"/><stop offset="1" stop-color="#4c1d95"/>
+    </linearGradient>
+    <linearGradient id="rHead" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ddd6fe"/><stop offset=".4" stop-color="#a78bfa"/><stop offset="1" stop-color="#5b21b6"/>
+    </linearGradient>
+    <radialGradient id="rVisor" cx=".35" cy=".3" r=".9">
+      <stop offset="0" stop-color="#3b2a6b"/><stop offset="1" stop-color="#0f0a24"/>
+    </radialGradient>
+    <radialGradient id="rEye" cx=".4" cy=".35" r=".8">
+      <stop offset="0" stop-color="#fff"/><stop offset=".4" stop-color="#67e8f9"/><stop offset="1" stop-color="#22d3ee"/>
+    </radialGradient>
+    <radialGradient id="rBall" cx=".35" cy=".3" r=".8">
+      <stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#e879f9"/><stop offset="1" stop-color="#a21caf"/>
+    </radialGradient>
+    <symbol id="robot" viewBox="0 0 100 110">
+      <!-- bayangan lantai -->
+      <ellipse cx="50" cy="106" rx="24" ry="3.5" fill="#000" opacity=".35"/>
+      <!-- antena -->
+      <rect x="48.5" y="6" width="3" height="12" rx="1.5" fill="#6d28d9"/>
+      <circle class="ant" cx="50" cy="6" r="5" fill="url(#rBall)"/>
+      <!-- telinga -->
+      <rect x="9" y="34" width="9" height="20" rx="4.5" fill="url(#rBody)"/>
+      <rect x="82" y="34" width="9" height="20" rx="4.5" fill="url(#rBody)"/>
+      <!-- kepala -->
+      <rect x="14" y="17" width="72" height="50" rx="22" fill="url(#rHead)"/>
+      <rect x="18" y="19" width="64" height="12" rx="6" fill="#fff" opacity=".28"/>
+      <!-- visor -->
+      <rect x="22" y="29" width="56" height="28" rx="13" fill="url(#rVisor)"/>
+      <rect x="22" y="29" width="56" height="28" rx="13" fill="none" stroke="#c4b5fd" stroke-opacity=".5" stroke-width="1.2"/>
+      <!-- mata -->
+      <ellipse class="eye" cx="38" cy="43" rx="6" ry="7" fill="url(#rEye)"/>
+      <ellipse class="eye" cx="62" cy="43" rx="6" ry="7" fill="url(#rEye)"/>
+      <circle cx="36" cy="40.5" r="1.8" fill="#fff"/><circle cx="60" cy="40.5" r="1.8" fill="#fff"/>
+      <!-- senyum -->
+      <path d="M44 52 Q50 56 56 52" stroke="#67e8f9" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+      <!-- leher -->
+      <rect x="42" y="66" width="16" height="6" rx="3" fill="#4c1d95"/>
+      <!-- badan -->
+      <rect x="26" y="70" width="48" height="32" rx="16" fill="url(#rBody)"/>
+      <ellipse cx="42" cy="77" rx="12" ry="4" fill="#fff" opacity=".25"/>
+      <circle cx="50" cy="87" r="6.5" fill="url(#rVisor)" stroke="#c4b5fd" stroke-opacity=".6"/>
+      <circle cx="50" cy="87" r="3" fill="#a78bfa"/>
+      <!-- lengan -->
+      <g class="arm-l"><rect x="12" y="73" width="12" height="24" rx="6" fill="url(#rBody)"/></g>
+      <rect x="76" y="73" width="12" height="24" rx="6" fill="url(#rBody)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ===== LOGIN ===== -->
+<div id="loginView">
+  <form class="card" id="f">
+    <div class="logo"><svg class="robot" viewBox="0 0 100 110" aria-label="Robot Nifa Core"><use href="#robot"/></svg></div>
+    <h1>Nifa <span>Core</span><br>Member Login</h1>
+    <p class="sub">Silakan Login Menggunakan Akun Anda</p>
+
+    <label class="t" for="email">✉️ Email Address</label>
+    <div class="field"><input type="email" id="email" placeholder="nama@email.com" required></div>
+
+    <label class="t" for="pw">🔒 Password</label>
+    <div class="field">
+      <input type="password" id="pw" placeholder="••••••••" required>
+      <button type="button" class="eye" id="eye">👁</button>
+    </div>
+
+    <label class="remember"><input type="checkbox" checked> Ingat Saya</label>
+    <div id="msg"></div>
+    <button class="btn" type="submit">Masuk Sekarang →</button>
+
+    <hr>
+    <div class="links">
+      Belum Memiliki Akun?<br>Lupa Password?<br>
+      <a href="https://wa.me/6281234567890" target="_blank" rel="noopener">💬 Hubungi Admin Sekarang</a>
+    </div>
+  </form>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div id="dashView" class="hidden">
+  <header>
+    <div class="brand"><svg class="robot" viewBox="0 0 100 110" aria-hidden="true"><use href="#robot"/></svg><span>Nifa <b>Core</b></span></div>
+    <div class="user">
+      <button class="avatar" id="avatarBtn"><span class="pic" id="initial">N</span> ▾</button>
+      <div class="menu" id="menu"><button id="logout">Keluar</button></div>
+    </div>
+  </header>
+  <main>
+    <h2>Selamat datang 👋</h2>
+    <p class="hello" id="hello"></p>
+    <section id="modules"></section>
+  </main>
+</div>
+
+<script>
+  // Penyimpanan aman (tetap jalan walau localStorage diblokir)
+  let mem = null;
+  const store = {
+    get(){ try { return localStorage.getItem('nifa_user'); } catch(e){ return mem; } },
+    set(v){ mem = v; try { localStorage.setItem('nifa_user', v); } catch(e){} },
+    del(){ mem = null; try { localStorage.removeItem('nifa_user'); } catch(e){} }
+  };
+
+  // ===== Edit daftar modul di sini =====
+  // image: isi URL/path gambar milik Anda. Kosong = gradien + emoji.
+  const modules = [
+    { no:1, title:'Video Iklan Profesional',    desc:'Buat video iklan produk berkualitas studio.', emoji:'🎬', image:'', grad:['#2e1065','#a78bfa'], link:'#' },
+    { no:2, title:'Video Affiliate Storyboard', desc:'Susun storyboard video affiliate yang menjual.', emoji:'📝', image:'', grad:['#1e1b4b','#818cf8'], link:'#' },
+    { no:3, title:'Konten Sosial Media',        desc:'Ide dan template konten harian.', emoji:'📱', image:'', grad:['#3b0764','#c084fc'], link:'#' },
+  ];
+
+  const $ = id => document.getElementById(id);
+
+  function render(){
+    const m = document.getElementById('modules'); m.innerHTML = '';
+    modules.forEach(x => {
+      const bg = x.image ? `background:url('${x.image}') center/cover` : `background:linear-gradient(135deg,${x.grad[0]},${x.grad[1]})`;
+      m.insertAdjacentHTML('beforeend', `<div class="module"><a class="mcard" href="${x.link}">
+        <div class="thumb" style="${bg}">${x.image ? '' : x.emoji}<span class="badge">MODUL ${x.no}</span></div>
+        <div class="info"><h3>${x.title}</h3><p>${x.desc}</p></div></a></div>`);
+    });
+  }
+
+  function show(){
+    const u = store.get();
+    $('loginView').classList.toggle('hidden', !!u);
+    $('dashView').classList.toggle('hidden', !u);
+    if (u){ $('hello').textContent = u; $('initial').textContent = u[0].toUpperCase(); render(); }
+    scrollTo(0,0);
+  }
+
+  $('eye').onclick = () => $('pw').type = $('pw').type === 'password' ? 'text' : 'password';
+  $('f').addEventListener('submit', e => {
+    e.preventDefault();
+    if ($('pw').value.length < 6){ $('msg').textContent = 'Password minimal 6 karakter.'; return; }
+    // ⚠️ DEMO: login palsu. Ganti dengan Supabase/Firebase Auth untuk produksi.
+    store.set($('email').value.trim()); $('msg').textContent = ''; show();
+  });
+  $('avatarBtn').onclick = () => $('menu').classList.toggle('open');
+  $('logout').onclick = () => { store.del(); $('menu').classList.remove('open'); show(); };
+  show();
+
+  // Background jaring titik
+  const c=$('bg'),x=c.getContext('2d');let pts=[];
+  function size(){c.width=innerWidth;c.height=innerHeight;pts=Array.from({length:45},()=>({x:Math.random()*c.width,y:Math.random()*c.height,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25}));}
+  function draw(){x.clearRect(0,0,c.width,c.height);
+    pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>c.width)p.vx*=-1;if(p.y<0||p.y>c.height)p.vy*=-1;});
+    for(let i=0;i<pts.length;i++){for(let j=i+1;j<pts.length;j++){const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
+      if(d<150){x.strokeStyle=`rgba(255,255,255,${.1*(1-d/150)})`;x.beginPath();x.moveTo(pts[i].x,pts[i].y);x.lineTo(pts[j].x,pts[j].y);x.stroke();}}
+      x.fillStyle='rgba(255,255,255,.35)';x.beginPath();x.arc(pts[i].x,pts[i].y,2,0,7);x.fill();}
+    requestAnimationFrame(draw);}
+  addEventListener('resize',size);size();draw();
+</script>
+</body>
+</html>

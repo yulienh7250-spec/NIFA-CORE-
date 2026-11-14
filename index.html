@@ -95,6 +95,9 @@
   .rvid { display:block; width:auto; max-width:100%; max-height:70vh; margin:0 auto; border-radius:16px; background:#000; border:1px solid #4c2f8a; }
   .yemb { position:relative; width:min(100%,360px); aspect-ratio:9/16; margin:0 auto; border-radius:16px; overflow:hidden; background:#000; border:1px solid #4c2f8a; }
   .yemb iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .state { color:var(--muted); text-align:center; padding:28px 12px; font-size:14px; }
+  .state.err { color:#ff8a8a; }
+  .btn[disabled] { opacity:.7; cursor:wait; }
   ol.steps { margin-left:20px; color:var(--muted); font-size:14px; line-height:1.8; }
   .actions { display:flex; flex-direction:column; gap:10px; margin-top:6px; }
   .act { display:block; text-align:center; text-decoration:none; padding:14px; border-radius:16px; font-weight:800; font-size:15px; }
@@ -165,7 +168,7 @@
       <button type="button" class="eye" id="eye">👁</button>
     </div>
 
-    <label class="remember"><input type="checkbox" checked> Ingat Saya</label>
+    <label class="remember"><input type="checkbox" id="remember" checked> Ingat Saya</label>
     <div id="msg"></div>
     <button class="btn" type="submit">Masuk Sekarang →</button>
 
@@ -199,95 +202,97 @@
   </main>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
   /* =====================================================
-     PENGATURAN (edit bagian ini saja)
+     PENGATURAN (diisi sekali saja)
      ===================================================== */
-
-  // Kalimat sambutan setelah login
+  const SUPABASE_URL = 'https://iyrktzaucaiwcyowuwyu.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_TdFSq28Mb4Ok1lqTa9lIpQ_tO9_bmAz';
   const WELCOME_TEXT = 'Senang Anda bergabung. Pilih modul di bawah, tonton video belajarnya, lalu praktikkan bersama asisten AI Nifa Core.';
 
-  // Daftar modul. Tambah modul baru dengan menyalin satu blok { ... }, lalu ubah isinya.
-  //  title    : judul modul
-  //  desc     : deskripsi singkat
-  //  image    : gambar hasil karya (mis. 'img/modul1.jpg'). Kosongkan jika belum ada.
-  //  resultYoutube: kode video YouTube hasil karya (bagian setelah youtu.be/), tampil sebagai pemutar di bagian Hasil
-  //  resultNote: teks keterangan hasil (tampil di atas gambar/placeholder)
-  //  steps    : langkah "Cara Menggunakan" (daftar teks)
-  //  aiLink   : link asisten AI untuk modul ini (kosong = tampil "Segera hadir")
-  //  youtube  : link video YouTube belajar (kosong = tampil "Segera hadir")
-  const modules = [
-    {
-      title: 'Belajar Membuat Animasi 3D',
-      desc: 'Pelajari dasar membuat animasi 3D dari nol sampai menghasilkan karya pertama Anda.',
-      resultYoutube: 'uw-rxiVw4jQ',
-      image: '',
-      resultNote: 'Contoh hasil animasi 3D akan ditampilkan di sini',
-      steps: [
-        'Tonton video belajar di YouTube.',
-        'Buka asisten AI dan ikuti contoh perintah (prompt) yang diberikan.',
-        'Praktikkan sendiri, lalu simpan hasil animasi Anda.'
-      ],
-      aiLink: 'https://gemini.google.com/gem/1U5Jh1NdBWaBySyKvlHhZxEiqrZOS5W13?usp=sharing',
-      youtube: 'https://youtu.be/C3j5uRd13Mo'
-    },
-    { title: 'Judul Modul 2', desc: 'Deskripsi modul akan segera ditambahkan.', image:'', resultNote:'', steps:[], aiLink:'', youtube:'' },
-    { title: 'Judul Modul 3', desc: 'Deskripsi modul akan segera ditambahkan.', image:'', resultNote:'', steps:[], aiLink:'', youtube:'' },
-    { title: 'Judul Modul 4', desc: 'Deskripsi modul akan segera ditambahkan.', image:'', resultNote:'', steps:[], aiLink:'', youtube:'' },
-    { title: 'Judul Modul 5', desc: 'Deskripsi modul akan segera ditambahkan.', image:'', resultNote:'', steps:[], aiLink:'', youtube:'' },
-    { title: 'Judul Modul 6', desc: 'Deskripsi modul akan segera ditambahkan.', image:'', resultNote:'', steps:[], aiLink:'', youtube:'' },
-    { title: 'Judul Modul 7', desc: 'Deskripsi modul akan segera ditambahkan.', image:'', resultNote:'', steps:[], aiLink:'', youtube:'' },
-    { title: 'Judul Modul 8', desc: 'Deskripsi modul akan segera ditambahkan.', image:'', resultNote:'', steps:[], aiLink:'', youtube:'' }
-  ];
-
   /* =====================================================
-     KODE (tidak perlu diubah)
+     KODE (tidak perlu diubah). Isi modul ada di Supabase.
      ===================================================== */
-  let mem = null;
-  const store = {
-    get(){ try { return localStorage.getItem('nifa_user'); } catch(e){ return mem; } },
-    set(v){ mem = v; try { localStorage.setItem('nifa_user', v); } catch(e){} },
-    del(){ mem = null; try { localStorage.removeItem('nifa_user'); } catch(e){} }
-  };
   const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const safeUrl = u => /^https:\/\//i.test(u || '') ? u : '';
+  const safeImg = u => /^[\w:\/.%?=&#~+-]+$/.test(u || '') ? u : '';
+  function ytId(v){
+    v = (v || '').trim(); if (!v) return '';
+    const m = v.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
+    if (m) return m[1];
+    return /^[A-Za-z0-9_-]{11}$/.test(v) ? v : '';
+  }
 
-  function render(){
-    $('welcomeText').textContent = WELCOME_TEXT;
-    $('count').textContent = modules.length + ' modul';
+  // Penyimpanan sesi: "Ingat Saya" = localStorage, tidak dicentang = sessionStorage
+  const memStore = {};
+  const remember = () => { try { return localStorage.getItem('nifa_remember') !== '0'; } catch(e){ return true; } };
+  const storage = {
+    getItem(k){ try { const v = sessionStorage.getItem(k); return v != null ? v : localStorage.getItem(k); } catch(e){ return memStore[k] || null; } },
+    setItem(k,v){ try { const keep = remember(); (keep ? localStorage : sessionStorage).setItem(k,v); (keep ? sessionStorage : localStorage).removeItem(k); } catch(e){ memStore[k] = v; } },
+    removeItem(k){ try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch(e){} delete memStore[k]; }
+  };
+
+  const configured = !/^GANTI_/.test(SUPABASE_URL) && !/^GANTI_/.test(SUPABASE_KEY) && window.supabase;
+  const sb = configured ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
+  }) : null;
+
+  function render(list){
+    $('count').textContent = list.length + ' modul';
     const wrap = $('modules'); wrap.innerHTML = '';
-    modules.forEach((m, i) => {
-      const ready = !!(m.aiLink || m.youtube || m.video || m.resultYoutube || (m.steps && m.steps.length) || m.image);
-      const bg = m.image ? ` style="background-image:url('${m.image}')"` : '';
-      const resultText = m.image ? '' : (m.resultNote || 'Hasil karya akan ditampilkan di sini');
-      const steps = (m.steps && m.steps.length)
-        ? `<div class="blk"><h4>📖 Cara Menggunakan</h4><ol class="steps">${m.steps.map(s => `<li>${s}</li>`).join('')}</ol></div>` : '';
-      const ai = m.aiLink ? `<a class="act ai" href="${m.aiLink}" target="_blank" rel="noopener">🤖 Buka Asisten AI</a>`
-                          : `<span class="act ai off">🤖 Asisten AI — Segera hadir</span>`;
-      const yt = m.youtube ? `<a class="act yt" href="${m.youtube}" target="_blank" rel="noopener">▶ Tonton di YouTube</a>`
-                           : `<span class="act yt off">▶ Video YouTube — Segera hadir</span>`;
+    if (!list.length){ wrap.innerHTML = '<p class="state">Belum ada materi.</p>'; return; }
+    list.forEach((m, i) => {
+      const steps = Array.isArray(m.steps) ? m.steps : [];
+      const rid = ytId(m.result_youtube);
+      const img = safeImg(m.image);
+      const ai = safeUrl(m.ai_link), yt = safeUrl(m.youtube_link);
+      const ready = !!(ai || yt || rid || steps.length || img);
+      let hasil;
+      if (rid) hasil = `<div class="yemb"><iframe src="https://www.youtube.com/embed/${rid}?rel=0" title="Hasil karya" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>`;
+      else if (img) hasil = `<div class="result" style="background-image:url('${img}')"></div>`;
+      else hasil = `<div class="result">Hasil karya akan ditampilkan di sini</div>`;
+      const stepsHtml = steps.length ? `<div class="blk"><h4>📖 Cara Menggunakan</h4><ol class="steps">${steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>` : '';
+      const aiBtn = ai ? `<a class="act ai" href="${esc(ai)}" target="_blank" rel="noopener">🤖 Buka Asisten AI</a>` : `<span class="act ai off">🤖 Asisten AI — Segera hadir</span>`;
+      const ytBtn = yt ? `<a class="act yt" href="${esc(yt)}" target="_blank" rel="noopener">▶ Tonton di YouTube</a>` : `<span class="act yt off">▶ Video YouTube — Segera hadir</span>`;
       wrap.insertAdjacentHTML('beforeend', `
         <article class="mod${i === 0 ? ' open' : ''}">
           <button class="mhead" type="button">
             <span class="num">MODUL ${i + 1}</span>
-            <span class="mtitle">${m.title}${ready ? '' : '<em>Segera hadir</em>'}</span>
+            <span class="mtitle">${esc(m.title)}${ready ? '' : '<em>Segera hadir</em>'}</span>
             <span class="chev">▾</span>
           </button>
           <div class="mbody">
-            <p class="mdesc">${m.desc}</p>
-            <div class="blk"><h4>🎬 Hasil</h4>${m.resultYoutube ? `<div class="yemb"><iframe src="https://www.youtube.com/embed/${m.resultYoutube}?rel=0" title="Hasil karya" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>` : m.video ? `<video class="rvid" src="${m.video}" controls playsinline preload="metadata"></video>` : `<div class="result"${bg}>${resultText}</div>`}</div>
-            ${steps}
-            <div class="actions">${ai}${yt}</div>
+            <p class="mdesc">${esc(m.description)}</p>
+            <div class="blk"><h4>🎬 Hasil</h4>${hasil}</div>
+            ${stepsHtml}
+            <div class="actions">${aiBtn}${ytBtn}</div>
           </div>
         </article>`);
     });
   }
 
-  function show(){
-    const u = store.get();
-    $('loginView').classList.toggle('hidden', !!u);
-    $('dashView').classList.toggle('hidden', !u);
-    if (u){ $('hello').textContent = 'Masuk sebagai ' + u; $('initial').textContent = u[0].toUpperCase(); render(); }
-    scrollTo(0,0);
+  async function loadModules(){
+    $('count').textContent = '';
+    $('modules').innerHTML = '<p class="state">Memuat materi…</p>';
+    const { data, error } = await sb.from('modules').select('*').eq('published', true).order('position', { ascending: true });
+    if (error){ $('modules').innerHTML = '<p class="state err">Gagal memuat materi. Muat ulang halaman atau hubungi admin.</p>'; return; }
+    render(data || []);
+  }
+
+  async function show(session){
+    const logged = !!session;
+    $('loginView').classList.toggle('hidden', logged);
+    $('dashView').classList.toggle('hidden', !logged);
+    if (logged){
+      const u = (session.user && session.user.email) || '';
+      $('hello').textContent = 'Masuk sebagai ' + u;
+      $('initial').textContent = (u[0] || 'N').toUpperCase();
+      $('welcomeText').textContent = WELCOME_TEXT;
+      await loadModules();
+    }
+    scrollTo(0, 0);
   }
 
   $('modules').addEventListener('click', e => {
@@ -295,15 +300,33 @@
     if (h) h.parentElement.classList.toggle('open');
   });
   $('eye').onclick = () => $('pw').type = $('pw').type === 'password' ? 'text' : 'password';
-  $('f').addEventListener('submit', e => {
+
+  $('f').addEventListener('submit', async e => {
     e.preventDefault();
-    if ($('pw').value.length < 6){ $('msg').textContent = 'Password minimal 6 karakter.'; return; }
-    // ⚠️ DEMO: login palsu. Ganti dengan Supabase/Firebase Auth untuk produksi.
-    store.set($('email').value.trim()); $('msg').textContent = ''; show();
+    if (!sb){ $('msg').textContent = 'Situs belum siap. Hubungi admin.'; return; }
+    const btn = e.target.querySelector('.btn');
+    btn.disabled = true; btn.textContent = 'Memeriksa…';
+    try { localStorage.setItem('nifa_remember', $('remember').checked ? '1' : '0'); } catch(err){}
+    let res;
+    try { res = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('pw').value }); }
+    catch(err){ res = { error: err }; }
+    btn.disabled = false; btn.textContent = 'Masuk Sekarang →';
+    if (res.error || !res.data || !res.data.session){ $('msg').textContent = 'Email atau password salah.'; return; }
+    $('msg').textContent = ''; $('pw').value = '';
+    show(res.data.session);
   });
+
   $('avatarBtn').onclick = () => $('menu').classList.toggle('open');
-  $('logout').onclick = () => { store.del(); $('menu').classList.remove('open'); show(); };
-  show();
+  $('logout').onclick = async () => {
+    $('menu').classList.remove('open');
+    if (sb) { try { await sb.auth.signOut(); } catch(err){} }
+    show(null);
+  };
+
+  if (sb){
+    sb.auth.getSession().then(({ data }) => show(data && data.session)).catch(() => show(null));
+    sb.auth.onAuthStateChange(ev => { if (ev === 'SIGNED_OUT') show(null); });
+  } else { show(null); }
 
   // Background jaring titik
   const c=$('bg'),x=c.getContext('2d');let pts=[];
